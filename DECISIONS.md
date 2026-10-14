@@ -143,3 +143,69 @@ examples-jsm import paths stable with the types package.
 The same gradient fields creatures smell are cheap to maintain and reused by
 the documentary system (carrion spikes ⇒ possible kill site) — one source of
 truth, no duplicated bookkeeping.
+
+## D23 — Founders and rescues condense from the soil pool
+Seeded founders (and population-rescue respawns) debit their full energy
+(store + biomass) from the soil nutrient pool. No energy enters the world
+except sunlight; no founder is free. If the soil cannot pay, the spawn fails.
+
+## D24 — No juvenile growth stage
+Offspring are born at full genomic size; the parent must afford the child's
+structural biomass + a minimum store out of its endowment gene. A growth model
+was cut for scope; the energetic cost of reproduction is still honest, which
+is what the selection pressure needs.
+
+## D25 — Energy scale rebalance at integration
+TISSUE_ENERGY_DENSITY lowered to 1.6 E/kg and SOIL_INITIAL_NUTRIENTS raised so
+that (a) a parent's store can afford a child's biomass and (b) the initial
+soil pool can pay for the founder population. Recorded here because the first
+draft constants made reproduction mathematically impossible.
+
+## D26 — UI checklist
+The finding-patterns phase ran on a greenfield repo: 0-member family, no
+reference, no pre-existing theme. The theme proposal (D10 tokens in
+src/ui/style.css) plus a 12-line convention checklist were established and
+embedded verbatim in the UI implementation briefs; verification happens in M5.
+
+## D27 — Parts spawn in joint-rest pose; rotation genes are not a spawn pose
+A revolute joint cannot represent an off-axis rest rotation; spawning parts
+rotated per the rotation gene made the solver snap multi-ton parts into frame
+at hundreds of m/s (instant terrain tunneling). Bodies now spawn with every
+part aligned to its parent (the joint's zero pose). Morphological diversity
+comes from anchor placement, joint axes, limits and evolved motor use.
+
+## D28 — Anti-explosion safety rails
+Soft contacts (contact_natural_frequency = 8), CCD on every body part, a
+newborn settling clamp (3 m/s for the first 0.6 s, while the solver separates
+any sibling parts that developed overlapping) and a global terminal-velocity
+clamp (30 m/s), applied before and after each physics step. Instrumented
+probe: spawn explosions went 5 → 0 over 600 ticks.
+
+## D29 — Bootstrap economics (second balance pass)
+Headless probes showed zero natural reproduction: equilibrium energy sat
+below the reproduction threshold. Changes: allometric intake (EAT_RATE is
+E/s per kg^0.75, like Kleiber), plants are bigger packets (45 E) that regrow
+faster, founders start above a lowered reproduction threshold (0.55), and
+offspring tissue is cheaper (1.2 E/kg). Result over 1000 sim-seconds:
+sustained natural reproduction, population turnover (100 births/78 deaths),
+and the first emergent selection trend — mean gut herbivory fell 0.65 → 0.43
+(carnivory pays when live creatures are the densest energy source).
+
+## D30 — Adversarial review round (25 confirmed findings, all addressed or dispositioned)
+A five-dimension review fleet (science/ledger, sim correctness, render perf,
+UI checklist, protocol wiring) with per-finding adversarial verification
+confirmed 25 findings; 0 were refuted. Fixed: phantom-soil spawn draws (the
+grid now debits in lockstep with the ledger, with a grid-vs-ledger invariant
+test), founder affordability (soil pool raised; test pins exact founder
+count), touch sense (collision events were never enabled on colliders),
+texture-cache eviction vs live meshes (refcounted release), 10x message
+flooding (wall-clock rate gates), hidden-tab dead-mesh accumulation
+(visibility-aware reaping), dead creatures biting in their death tick,
+per-tick reproduction-mode re-rolls erasing the sexual gene, mate cooldown
+abuse, rescue lineage holes in the phylogeny, kill attribution on store
+drain, float32 clock stepping (main-side float64 clock), max-mode scene
+drain + season drift, chronological event trimming, pause outbox stranding,
+pre-init query crashes, silent worker death, HUD focus eating shortcuts,
+phylo's second color formula, inert timeline rows. Consciously not changed:
+HUD day/year counters bypass fmt() (small integers render identically; the
+chart axis style is a different unit domain).

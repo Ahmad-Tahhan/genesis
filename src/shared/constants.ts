@@ -18,9 +18,9 @@ export const EROSION_DROPLETS = 30000;
 
 // ---------- population ----------
 export const MAX_CREATURES = 140;
-export const MIN_POPULATION = 18; // below this, respawn mutated founders (rescue)
+export const MIN_POPULATION = 22; // below this, respawn mutated founders (rescue)
 export const INITIAL_POPULATION = 48;
-export const MAX_PLANTS = 2600;
+export const MAX_PLANTS = 3400;
 
 // ---------- body plan ----------
 export const MAX_PARTS = 12;
@@ -29,22 +29,27 @@ export const MAX_RECURSION = 3;
 export const MAX_EYES_PER_PART = 3;
 export const MAX_EYE_RAYS = 6; // whole-body cap
 export const MIN_PART_DIM = 0.09;
-export const MAX_PART_DIM = 0.75;
+export const MAX_PART_DIM = 0.5;
 export const EYE_RANGE = 26; // meters
 export const EYE_FOV_SPREAD = 0.45; // radians between fanned rays
-export const TISSUE_DENSITY = 420; // kg/m^3 baseline; gene multiplies 0.6..1.6
+export const TISSUE_DENSITY = 250; // kg/m^3 baseline; gene multiplies 0.6..1.6
 
 // ---------- energy / metabolism ----------
-export const TISSUE_ENERGY_DENSITY = 9; // E per kg of body mass (build/corpse value)
+export const TISSUE_ENERGY_DENSITY = 1.2; // E per kg of body mass (build/corpse value)
 export const KLEIBER_COEFF = 0.011; // E/s per kg^0.75 basal
 export const NEURON_COST = 0.00022; // E/s per brain node
 export const SYNAPSE_COST = 0.00006; // E/s per enabled connection
-export const MUSCLE_WORK_COST = 0.055; // E per (N*m * rad) of commanded work
+export const MUSCLE_WORK_COST = 0.012; // E per (N*m * rad) of commanded work
 export const MUSCLE_ACTIVATION_COST = 0.004; // E/s per (activation * maxTorque/100)
 export const MUSCLE_TORQUE_PER_VOLUME = 2400; // N*m per m^3 of part volume at muscle=1
-export const STORE_PER_MASS = 7.5; // energy store capacity: E per kg
-export const EAT_RATE = 10; // E/s transferable while biting
-export const BITE_RANGE = 0.55; // m from mouth part tip
+export const STORE_PER_MASS = 9; // energy store capacity: E per kg
+export const MAX_AGE = 600; // seconds; old-age mortality ramps in near this
+export const DROWN_GRACE = 8; // seconds submerged before drowning damage
+export const DROWN_DPS = 7; // health/s while drowning
+export const BUOYANCY_ACCEL = 13.5; // m/s^2 upward at full submersion (vs |GRAVITY|)
+export const WATER_DRAG = 0.1; // extra per-tick velocity damping in water
+export const EAT_RATE = 0.9; // E/s per kg^0.75 of eater mass (allometric intake)
+export const BITE_RANGE = 0.8; // m from mouth part tip
 export const DIGEST_LOSS = 0.25; // fraction of ingested energy lost as heat at best
 export const THERMO_COST_COEFF = 0.004; // extra E/s per kg^0.75 per unit cold stress
 
@@ -59,7 +64,7 @@ export const HEALTH_REGEN = 0.6; // health/s when energy above half
 export const HEALTH_REGEN_COST = 0.06; // E per health point
 
 // ---------- reproduction ----------
-export const REPRO_ENERGY_FRAC = 0.75; // store fraction (of capacity) needed to reproduce
+export const REPRO_ENERGY_FRAC = 0.55; // store fraction (of capacity) needed to reproduce
 export const REPRO_COOLDOWN = 18; // seconds
 export const MATE_RANGE = 6; // m for sexual reproduction
 export const GESTATION_OVERHEAD = 0.12; // fraction of endowment lost as heat
@@ -85,8 +90,8 @@ export const COMPAT_C_WEIGHT = 0.5;
 export const COMPAT_C_BODY = 1.6;
 
 // ---------- plants ----------
-export const PLANT_MAX_BIOMASS = 16; // E
-export const PLANT_GROWTH_RATE = 0.42; // E/s at full light, nutrients, moisture
+export const PLANT_MAX_BIOMASS = 45; // E
+export const PLANT_GROWTH_RATE = 1.1; // E/s at full light, nutrients, moisture
 export const PLANT_NUTRIENT_STOICH = 0.35; // soil E consumed per E of growth
 export const PLANT_SEED_COST = 2.4; // E per seed (packet carried by seed)
 export const PLANT_SEED_THRESHOLD = 0.72; // biomass fraction to start seeding
@@ -94,7 +99,7 @@ export const PLANT_SEED_INTERVAL = 22; // seconds between seeding attempts
 export const SEED_DISPERSAL = 14; // meters (scaled by wind)
 export const GERMINATION_MOISTURE = 0.18;
 export const SOIL_GRID_RES = 64;
-export const SOIL_INITIAL_NUTRIENTS = 11000; // total E spread over fertile cells
+export const SOIL_INITIAL_NUTRIENTS = 230000; // total E spread over fertile cells
 export const DECOMPOSE_RATE = 0.06; // fraction of corpse biomass per second
 export const DECOMPOSE_LOSS = 0.2; // fraction of decomposed energy lost as heat
 export const CARRION_SMELL_GAIN = 1.0;

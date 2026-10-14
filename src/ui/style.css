@@ -1,0 +1,418 @@
+/*
+ * Genesis UI theme — the single place for every visual value (DECISIONS.md
+ * D10/D26). All colors, spacing, radii and font sizes are custom properties
+ * on :root; TypeScript never contains style literals (dynamic meter widths
+ * and species colors are the sanctioned exceptions, see the UI checklist).
+ */
+
+:root {
+  /* surfaces */
+  --bg: #090d12;
+  --panel: rgba(12, 17, 23, 0.84);
+  --panel-border: rgba(170, 200, 210, 0.14);
+  --hover: rgba(255, 255, 255, 0.07);
+  --meter-bg: rgba(255, 255, 255, 0.1);
+  --radius: 10px;
+
+  /* ink */
+  --text: #e8eef2;
+  --text-dim: #93a4ad;
+  --accent: #7dd3a8;
+  --accent-contrast: #0a140e;
+  --danger: #ef7070;
+  --ok: #8fd460;
+
+  /* type */
+  --font: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --fs-s: 11px;
+  --fs-m: 13px;
+  --fs-l: 15px;
+
+  /* spacing, 4px base */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+}
+
+/* ------------------------------------------------------------- base */
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+#app,
+#stage {
+  position: fixed;
+  inset: 0;
+}
+
+#stage canvas {
+  display: block;
+}
+
+/* ------------------------------------------------------------ overlay */
+
+#overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  font-family: var(--font);
+  font-size: var(--fs-m);
+  color: var(--text);
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* generic panel chrome; each panel re-enables pointer events */
+.panel {
+  pointer-events: auto;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+
+/* ------------------------------------------------------------- HUD */
+
+.hud {
+  position: absolute;
+  top: var(--sp-2);
+  left: var(--sp-2);
+  right: var(--sp-2);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+}
+
+.hud-group {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.hud-clock {
+  font-size: var(--fs-l);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.hud-stats {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  flex-wrap: wrap;
+}
+
+.hud-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--sp-1);
+  white-space: nowrap;
+}
+
+.hud-stat .k {
+  color: var(--text-dim);
+  font-size: var(--fs-s);
+}
+
+.hud-stat .v {
+  color: var(--text);
+  font-size: var(--fs-m);
+}
+
+/* ------------------------------------------------------------ buttons */
+
+.btn {
+  font: inherit;
+  font-size: var(--fs-m);
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--panel-border);
+  border-radius: calc(var(--radius) - 4px);
+  padding: var(--sp-1) var(--sp-2);
+  min-width: 34px;
+  cursor: pointer;
+  line-height: 1.3;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.btn:hover {
+  background: var(--hover);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+/* --------------------------------------------------------- side panel */
+
+.side {
+  position: absolute;
+  top: 60px;
+  right: var(--sp-2);
+  bottom: var(--sp-2);
+  width: 350px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tabs {
+  display: flex;
+  gap: var(--sp-1);
+  padding: var(--sp-2) var(--sp-2) 0;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.tab {
+  flex: 1;
+  font: inherit;
+  font-size: var(--fs-m);
+  color: var(--text-dim);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: var(--sp-1) var(--sp-2) var(--sp-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: calc(var(--radius) - 6px);
+}
+
+.tab[aria-selected='true'] {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.tabpanel {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--sp-3);
+  scrollbar-width: thin;
+  scrollbar-color: var(--panel-border) transparent;
+}
+
+.tabpanel[hidden] {
+  display: none;
+}
+
+/* ------------------------------------------------------------- meters */
+
+.meter {
+  height: 6px;
+  background: var(--meter-bg);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.meter-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: inherit;
+  transition: width 0.2s ease;
+}
+
+/* key-value rows (inspector) */
+.kv {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--sp-1) var(--sp-3);
+  font-size: var(--fs-m);
+  margin: var(--sp-2) 0;
+}
+
+.kv .k {
+  color: var(--text-dim);
+}
+
+.kv .v {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* labelled meter rows (diet, traits, species bars) */
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) 0;
+  font-size: var(--fs-s);
+  color: var(--text-dim);
+}
+
+.bar-row .meter {
+  flex: 1;
+}
+
+.bar-row .v {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  min-width: 34px;
+  text-align: right;
+}
+
+/* ------------------------------------------------------------- charts */
+
+.chart canvas {
+  display: block;
+  width: 100%;
+  height: 160px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-3);
+  padding-top: var(--sp-2);
+  font-size: var(--fs-s);
+  color: var(--text-dim);
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  white-space: nowrap;
+}
+
+.legend-item .name {
+  color: var(--text);
+}
+
+.chip {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex: none;
+}
+
+/* ------------------------------------------------------------- events */
+
+.events {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.events li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-1);
+  border-bottom: 1px solid var(--panel-border);
+  cursor: pointer;
+  border-radius: calc(var(--radius) - 6px);
+}
+
+.events li:hover {
+  background: var(--hover);
+}
+
+.events li:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.events .ev-icon {
+  flex: none;
+}
+
+.events .ev-text {
+  flex: 1;
+  font-size: var(--fs-m);
+}
+
+.events .ev-day {
+  flex: none;
+  color: var(--text-dim);
+  font-size: var(--fs-s);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------ captions */
+
+.caption {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  transform: translate(-50%, 10px);
+  max-width: 56%;
+  padding: var(--sp-2) var(--sp-4);
+  text-align: center;
+  font-size: var(--fs-l);
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  opacity: 0;
+  transition: opacity 0.45s ease, transform 0.45s ease;
+  pointer-events: none;
+}
+
+.caption.visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* --------------------------------------------- small screens: bottom sheet */
+
+@media (max-width: 900px) {
+  .side {
+    top: auto;
+    left: var(--sp-2);
+    right: var(--sp-2);
+    bottom: 0;
+    width: auto;
+    max-height: 44vh;
+    border-radius: var(--radius) var(--radius) 0 0;
+    border-bottom: none;
+  }
+
+  .caption {
+    bottom: calc(44vh + 14px);
+    max-width: 90%;
+  }
+
+  .hud-stats {
+    gap: var(--sp-2);
+  }
+}
+
+/* events without a world position are informational, not clickable */
+.events li.ev-static {
+  cursor: default;
+}
+.events li.ev-static:hover {
+  background: transparent;
+}

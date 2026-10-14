@@ -1,0 +1,197 @@
+/*
+ * Inspector + phylogeny panel styles (UI group: inspector/phylo).
+ * Theme values come ONLY from the CSS custom properties declared on :root in
+ * src/ui/style.css (var(--token) references); the px literals here are layout
+ * dimensions, never colors. Shared looks (.kv, .meter, .bar-row, .btn) live
+ * in style.css — this file only adds inspector/phylo-specific layout.
+ */
+
+.inspector {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: var(--fs-m);
+}
+
+.insp-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.insp-empty {
+  color: var(--text-dim);
+  text-align: center;
+  padding: var(--sp-4) var(--sp-2);
+}
+
+/* keep the hidden attribute working despite the display overrides above */
+.insp-content[hidden],
+.insp-empty[hidden] {
+  display: none;
+}
+
+/* ------------------------------------------------------------- header */
+
+.insp-title {
+  font-size: var(--fs-l);
+  line-height: 1.3;
+}
+
+.insp-title .sp-name {
+  font-style: italic;
+}
+
+.insp-title .cid {
+  color: var(--text-dim);
+  font-size: var(--fs-m);
+  font-style: normal;
+}
+
+/* ----------------------------------------------------------- sections */
+
+.sec-title {
+  margin-top: var(--sp-2);
+  color: var(--text-dim);
+  font-size: var(--fs-s);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+/* keep the inspector's stacked kv blocks tight inside the flex column */
+.inspector .kv {
+  margin: 0;
+}
+
+/* meters: align the two labelled bars on a fixed label column and leave
+   room for "x / y" values */
+.inspector .bar-row > span:first-child {
+  flex: 0 0 56px;
+}
+
+.inspector .bar-row .v {
+  min-width: 76px;
+}
+
+/* ----------------------------------------------------------- diet bar */
+
+.diet-bar {
+  display: flex;
+  height: 14px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--meter-bg);
+}
+
+.diet-bar.diet-none {
+  opacity: 0.35;
+}
+
+.diet-plant {
+  height: 100%;
+  background: var(--ok);
+}
+
+.diet-meat {
+  height: 100%;
+  background: var(--danger);
+}
+
+.diet-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--sp-1);
+  color: var(--text-dim);
+  font-size: var(--fs-s);
+}
+
+/* ------------------------------------------------------ lineage chips */
+
+.v.chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--sp-1);
+}
+
+/* compact id buttons on top of the shared .btn look */
+.btn.id-chip {
+  padding: 0 var(--sp-2);
+  min-width: 0;
+  font-size: var(--fs-s);
+  color: var(--accent);
+}
+
+/* -------------------------------------------------------- brain graph */
+
+.brain-canvas {
+  display: block;
+  width: 100%;
+  height: 260px;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+}
+
+/* ------------------------------------------------------ genome details */
+
+.genome {
+  margin-top: var(--sp-1);
+}
+
+.genome summary {
+  cursor: pointer;
+  color: var(--text-dim);
+  font-size: var(--fs-m);
+}
+
+.genome summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.genome-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+}
+
+.genome-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-s);
+}
+
+.genome-table th {
+  color: var(--text-dim);
+  font-weight: 400;
+  text-align: right;
+  padding: 2px 4px;
+}
+
+.genome-table td {
+  color: var(--text);
+  text-align: right;
+  padding: 2px 4px;
+  border-top: 1px solid var(--panel-border);
+  font-variant-numeric: tabular-nums;
+}
+
+.genome-table th:first-child,
+.genome-table td:first-child {
+  text-align: left;
+}
+
+/* -------------------------------------------------------------- phylo */
+
+.phylo-view {
+  width: 100%;
+}
+
+.phylo-canvas {
+  display: block;
+  width: 100%;
+  height: 340px;
+}
