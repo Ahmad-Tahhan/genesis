@@ -172,6 +172,12 @@ function handleEvents(events: SimEvent[]): void {
 
 send({ type: 'init', seed });
 
+// tiny debug/testing handle (harmless in production)
+(window as unknown as Record<string, unknown>).__genesis = {
+  select,
+  ids: () => [...infoById.keys()],
+};
+
 // ------------------------------------------------------------ interaction
 const raycaster = new THREE.Raycaster();
 const ndc = new THREE.Vector2();

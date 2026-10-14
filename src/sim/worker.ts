@@ -138,7 +138,7 @@ function loop(): void {
     }
     flushOutboxes(false);
   }
-  setTimeout(loop, 8);
+  setTimeout(loop, speed === 1 ? 8 : 0);
 }
 
 function updateTps(): void {
