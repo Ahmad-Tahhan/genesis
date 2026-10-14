@@ -396,8 +396,11 @@ export class World {
   /** One bite per tick from the first mouth part with a reachable target. */
   private feed(c: Creature, list: Creature[]): void {
     if (c.energy >= c.capacity - 1e-6) return;
-    // intake scales allometrically, like metabolism (Kleiber-style)
+    // intake scales allometrically, like metabolism (Kleiber-style); a bite
+    // never exceeds the remaining store room (the ledger books every joule
+    // transferred, so nothing may be absorbed and then discarded)
     const biteBudget = EAT_RATE * Math.pow(c.plan.totalMass, 0.75) * DT;
+    const room = c.capacity - c.energy;
     for (let i = 0; i < c.plan.parts.length; i++) {
       const part = c.plan.parts[i];
       if (!part.mouth) continue;
@@ -425,9 +428,12 @@ export class World {
         }
       }
       if (victim) {
-        const gross = Math.min(biteBudget, Math.max(0, victim.corpseEnergy()));
+        // a live bite steals store energy only; structural biomass becomes
+        // available through the corpse after a kill (keeps the ledger's
+        // creature pool equal to the true sum of stores + biomass)
+        const gross = Math.min(biteBudget, Math.max(0, victim.energy), room / c.meatEff);
         const net = this.ledger.biteCreature(gross, c.meatEff);
-        victim.energy = Math.max(0, victim.energy - gross);
+        victim.energy -= gross;
         c.absorb(net, 'meat');
         const killed = victim.damage(BITE_DAMAGE * DT, 'killed');
         if (killed) this.killerOf.set(victim.id, c);
@@ -446,14 +452,14 @@ export class World {
       }
 
       // 2. scavenge a corpse
-      const scav = this.eco.scavengeAt(mouth.x, mouth.z, biteBudget, c.meatEff);
+      const scav = this.eco.scavengeAt(mouth.x, mouth.z, Math.min(biteBudget, room / c.meatEff), c.meatEff);
       if (scav > 0) {
         c.absorb(scav, 'meat');
         return;
       }
 
       // 3. graze plants
-      const net = this.eco.grazeAt(mouth.x, mouth.z, biteBudget, c.plantEff);
+      const net = this.eco.grazeAt(mouth.x, mouth.z, Math.min(biteBudget, room / c.plantEff), c.plantEff);
       if (net > 0) {
         c.absorb(net, 'plant');
         return;
@@ -497,7 +503,14 @@ export class World {
 
     c.energy -= endowment;
     this.ledger.birthOverhead(overhead);
-    const childStore = endowment - overhead - childBiomass;
+    let childStore = endowment - overhead - childBiomass;
+    // a tiny child of a rich parent cannot hold the whole endowment: the
+    // overflow returns to the parent instead of vanishing from the books
+    const overflow = Math.max(0, childStore - childCap);
+    if (overflow > 0) {
+      childStore -= overflow;
+      c.energy = Math.min(c.energy + overflow, c.capacity);
+    }
 
     const p = c.rootPos();
     const pos = this.childSpot(p);

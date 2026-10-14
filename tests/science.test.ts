@@ -96,6 +96,17 @@ describe('energy conservation', () => {
     expect(l1.sunlightIn).toBeGreaterThan(l0.sunlightIn);
     expect(l1.heatOut).toBeGreaterThan(0);
     expect(w.birthsTotal + w.deathsTotal).toBeGreaterThan(0);
+
+    // the ledger pools must equal reality, not just balance internally:
+    let sumCreat = 0;
+    for (const c of w.creatures.values()) sumCreat += Math.max(0, c.energy) + c.biomass;
+    expect(Math.abs(l1.creatures - sumCreat) / scale).toBeLessThan(1e-6);
+    let sumCorpse = 0;
+    for (const corpse of w.eco.corpses) sumCorpse += corpse.energy;
+    expect(Math.abs(l1.corpses - sumCorpse) / scale).toBeLessThan(1e-6);
+    let sumPlant = 0;
+    for (const p of w.eco.plants) if (p.alive) sumPlant += p.biomass;
+    expect(Math.abs(l1.plants - sumPlant) / scale).toBeLessThan(1e-6);
   });
 
   it('ledger movers clamp without leaking energy', () => {
