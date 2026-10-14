@@ -2,7 +2,8 @@
  * Inspector + phylogeny panel styles (UI group: inspector/phylo).
  * Theme values come ONLY from the CSS custom properties declared on :root in
  * src/ui/style.css (var(--token) references); the px literals here are layout
- * dimensions, never colors.
+ * dimensions, never colors. Shared looks (.kv, .meter, .bar-row, .btn) live
+ * in style.css — this file only adds inspector/phylo-specific layout.
  */
 
 .inspector {
@@ -26,6 +27,12 @@
   padding: var(--sp-4) var(--sp-2);
 }
 
+/* keep the hidden attribute working despite the display overrides above */
+.insp-content[hidden],
+.insp-empty[hidden] {
+  display: none;
+}
+
 /* ------------------------------------------------------------- header */
 
 .insp-title {
@@ -43,22 +50,7 @@
   font-style: normal;
 }
 
-/* ------------------------------------------------------------ kv rows */
-
-.inspector .kv {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: var(--sp-2);
-}
-
-.inspector .kv-k {
-  color: var(--text-dim);
-}
-
-.inspector .kv-v {
-  text-align: right;
-}
+/* ----------------------------------------------------------- sections */
 
 .sec-title {
   margin-top: var(--sp-2);
@@ -68,39 +60,19 @@
   letter-spacing: 0.07em;
 }
 
-/* ------------------------------------------------------------- meters */
-/* Shared .meter > .meter-fill markup (style.css owns the base look); the
-   scoped rules below only guarantee the inspector's meters lay out. */
-
-.meter-row {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
+/* keep the inspector's stacked kv blocks tight inside the flex column */
+.inspector .kv {
+  margin: 0;
 }
 
-.meter-row .kv-k {
+/* meters: align the two labelled bars on a fixed label column and leave
+   room for "x / y" values */
+.inspector .bar-row > span:first-child {
   flex: 0 0 56px;
 }
 
-.inspector .meter {
-  flex: 1 1 auto;
-  height: 8px;
-  background: var(--panel-border);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-
-.inspector .meter-fill {
-  height: 100%;
-  border-radius: var(--radius);
-}
-
-.meter-val {
-  flex: 0 0 76px;
-  text-align: right;
-  color: var(--text-dim);
-  font-size: var(--fs-s);
-  font-variant-numeric: tabular-nums;
+.inspector .bar-row .v {
+  min-width: 76px;
 }
 
 /* ----------------------------------------------------------- diet bar */
@@ -110,7 +82,7 @@
   height: 14px;
   border-radius: var(--radius);
   overflow: hidden;
-  background: var(--panel-border);
+  background: var(--meter-bg);
 }
 
 .diet-bar.diet-none {
@@ -137,31 +109,19 @@
 
 /* ------------------------------------------------------ lineage chips */
 
-.chips {
+.v.chips {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: var(--sp-1);
 }
 
-.chip {
-  padding: 1px 8px;
-  background: var(--panel);
-  border: 1px solid var(--panel-border);
-  border-radius: var(--radius);
-  color: var(--accent);
-  font-family: var(--font);
+/* compact id buttons on top of the shared .btn look */
+.btn.id-chip {
+  padding: 0 var(--sp-2);
+  min-width: 0;
   font-size: var(--fs-s);
-  cursor: pointer;
-}
-
-.chip:hover {
-  border-color: var(--accent);
-}
-
-.chip:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  color: var(--accent);
 }
 
 /* -------------------------------------------------------- brain graph */
@@ -224,13 +184,7 @@
   text-align: left;
 }
 
-.genome-org {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-1);
-}
-
-/* ------------------------------------------------------------- phylo */
+/* -------------------------------------------------------------- phylo */
 
 .phylo-view {
   width: 100%;
