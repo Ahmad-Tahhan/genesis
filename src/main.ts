@@ -196,6 +196,7 @@ window.addEventListener('keydown', (e) => {
 });
 
 // doc-cam follows creatures via mesh positions
+renderer.setPositionResolver((id) => creatures.getPosition(id));
 renderer.docCam.auto = true;
 
 // panel-driven queries

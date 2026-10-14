@@ -35,7 +35,7 @@ export const EYE_FOV_SPREAD = 0.45; // radians between fanned rays
 export const TISSUE_DENSITY = 250; // kg/m^3 baseline; gene multiplies 0.6..1.6
 
 // ---------- energy / metabolism ----------
-export const TISSUE_ENERGY_DENSITY = 1.6; // E per kg of body mass (build/corpse value)
+export const TISSUE_ENERGY_DENSITY = 1.2; // E per kg of body mass (build/corpse value)
 export const KLEIBER_COEFF = 0.011; // E/s per kg^0.75 basal
 export const NEURON_COST = 0.00022; // E/s per brain node
 export const SYNAPSE_COST = 0.00006; // E/s per enabled connection
@@ -64,7 +64,7 @@ export const HEALTH_REGEN = 0.6; // health/s when energy above half
 export const HEALTH_REGEN_COST = 0.06; // E per health point
 
 // ---------- reproduction ----------
-export const REPRO_ENERGY_FRAC = 0.7; // store fraction (of capacity) needed to reproduce
+export const REPRO_ENERGY_FRAC = 0.55; // store fraction (of capacity) needed to reproduce
 export const REPRO_COOLDOWN = 18; // seconds
 export const MATE_RANGE = 6; // m for sexual reproduction
 export const GESTATION_OVERHEAD = 0.12; // fraction of endowment lost as heat
@@ -90,8 +90,8 @@ export const COMPAT_C_WEIGHT = 0.5;
 export const COMPAT_C_BODY = 1.6;
 
 // ---------- plants ----------
-export const PLANT_MAX_BIOMASS = 16; // E
-export const PLANT_GROWTH_RATE = 0.42; // E/s at full light, nutrients, moisture
+export const PLANT_MAX_BIOMASS = 45; // E
+export const PLANT_GROWTH_RATE = 1.1; // E/s at full light, nutrients, moisture
 export const PLANT_NUTRIENT_STOICH = 0.35; // soil E consumed per E of growth
 export const PLANT_SEED_COST = 2.4; // E per seed (packet carried by seed)
 export const PLANT_SEED_THRESHOLD = 0.72; // biomass fraction to start seeding

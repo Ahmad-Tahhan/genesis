@@ -163,8 +163,8 @@ describe('addTerrain heightfield', () => {
     // near corners (just inside the field) the field must still exist
     expect(groundHeightAt(world, -7.9, -7.9)).not.toBeNull();
     expect(groundHeightAt(world, 7.9, 7.9)).not.toBeNull();
-    // outside the field there is nothing to hit
-    expect(groundHeightAt(world, 9, 0)).toBeNull();
+    // outside the field AND beyond the perimeter walls there is nothing to hit
+    expect(groundHeightAt(world, 14, 0)).toBeNull();
     world.free();
   });
 

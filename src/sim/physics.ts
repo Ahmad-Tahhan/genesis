@@ -55,39 +55,6 @@ interface Quat {
   w: number;
 }
 
-/** Intrinsic XYZ euler -> quaternion; matches three.js Euler order 'XYZ'. */
-function quatFromEulerXYZ(e: Vec3): Quat {
-  const cx = Math.cos(e.x / 2);
-  const sx = Math.sin(e.x / 2);
-  const cy = Math.cos(e.y / 2);
-  const sy = Math.sin(e.y / 2);
-  const cz = Math.cos(e.z / 2);
-  const sz = Math.sin(e.z / 2);
-  return {
-    x: sx * cy * cz + cx * sy * sz,
-    y: cx * sy * cz - sx * cy * sz,
-    z: cx * cy * sz + sx * sy * cz,
-    w: cx * cy * cz - sx * sy * sz,
-  };
-}
-
-/** Hamilton product a*b (apply b, then a, to column vectors). */
-function quatMul(a: Quat, b: Quat): Quat {
-  return {
-    x: a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
-    y: a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
-    z: a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w,
-    w: a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
-  };
-}
-
-/** Renormalize to kill drift accumulated along deep part chains. */
-function quatNorm(q: Quat): Quat {
-  const l = Math.hypot(q.x, q.y, q.z, q.w);
-  if (l < 1e-12) return { x: 0, y: 0, z: 0, w: 1 };
-  return { x: q.x / l, y: q.y / l, z: q.z / l, w: q.w / l };
-}
-
 /** Rotate v by unit quaternion q. */
 function quatRotate(q: Quat, v: Vec3): Vec3 {
   const ix = q.w * v.x + q.y * v.z - q.z * v.y;
@@ -125,6 +92,11 @@ export async function initRapier(): Promise<typeof RAPIER> {
 export function createWorld(): RAPIER.World {
   const world = new RAPIER.World({ x: 0, y: GRAVITY, z: 0 });
   world.timestep = DT;
+  // Soft contacts: developed bodies can spawn with interpenetrating sibling
+  // parts; the default 30 Hz penetration recovery ejects them at hundreds of
+  // m/s (through the heightfield). Gentler recovery + the world's velocity
+  // clamps keep births calm.
+  world.integrationParameters.contact_natural_frequency = 8;
   return world;
 }
 
@@ -155,7 +127,28 @@ export function addTerrain(world: RAPIER.World, terrain: TerrainData): RAPIER.Co
   })
     .setFriction(GROUND_FRICTION)
     .setCollisionGroups(TERRAIN_GROUPS);
-  return world.createCollider(desc);
+  const collider = world.createCollider(desc);
+
+  // Perimeter walls: beyond the heightfield there is no floor, so creatures
+  // that wander off the edge would fall forever. Low-friction invisible walls
+  // keep everything inside the simulated world.
+  const half = terrain.size / 2;
+  const wallH = 60;
+  const walls: [number, number, number, number, number][] = [
+    // [cx, cz, hx, hz, _]
+    [half + 1, 0, 1, half + 2, 0],
+    [-half - 1, 0, 1, half + 2, 0],
+    [0, half + 1, half + 2, 1, 0],
+    [0, -half - 1, half + 2, 1, 0],
+  ];
+  for (const [cx, cz, hx, hz] of walls) {
+    const w = RAPIER.ColliderDesc.cuboid(hx, wallH, hz)
+      .setTranslation(cx, wallH / 2 - 5, cz)
+      .setFriction(0.05)
+      .setCollisionGroups(TERRAIN_GROUPS);
+    world.createCollider(w);
+  }
+  return collider;
 }
 
 // ============================= creatures ===================================
@@ -233,7 +226,12 @@ export function buildCreature(
         throw new Error('BodyPlan parts must be in development order (parent before child)');
       }
       const pRot = rots[part.parentIndex];
-      const rot = quatNorm(quatMul(pRot, quatFromEulerXYZ(part.rotation)));
+      // Spawn in the joint-rest pose (child aligned with parent): a revolute
+      // joint cannot represent the plan's off-axis rest rotation, and spawning
+      // rotated makes the solver snap multi-ton parts into frame at hundreds
+      // of m/s. Morphology comes from anchors, axes, limits and motor use;
+      // plan.rotation stays genome data only (DECISIONS.md D27).
+      const rot = pRot;
       const a = quatRotate(pRot, part.anchorOnParent);
       const b = quatRotate(rot, part.anchorOnSelf);
       const pp = poss[part.parentIndex];
@@ -260,7 +258,9 @@ export function buildCreature(
       .setRotation(rots[i])
       .setLinearDamping(LINEAR_DAMPING)
       .setAngularDamping(ANGULAR_DAMPING);
-    if (i === 0) bodyDesc.setCcdEnabled(true);
+    // CCD on every part: solver bursts (joint conflicts, overlap recovery on
+    // extreme mass ratios) must never carry a body through the heightfield.
+    bodyDesc.setCcdEnabled(true);
     const body = world.createRigidBody(bodyDesc);
     bodies[i] = body;
 

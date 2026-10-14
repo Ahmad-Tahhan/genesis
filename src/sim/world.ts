@@ -40,6 +40,7 @@ import {
   MIGRATION_DISTANCE,
   MIN_POPULATION,
   PLANTS_SNAPSHOT_INTERVAL,
+  PLANT_MAX_BIOMASS,
   REPRO_COOLDOWN,
   REPRO_ENERGY_FRAC,
   SEASON_LIGHT_AMPLITUDE,
@@ -275,6 +276,7 @@ export class World {
       c.brain.step();
       const muscleCost = c.actuate();
       this.applyWater(c);
+      this.clampVelocities(c);
       this.feed(c, list);
       c.age += DT;
       c.reproCooldown -= DT;
@@ -283,6 +285,10 @@ export class World {
     }
 
     this.phys.step(this.eventQueue);
+    // post-step clamp: a solver burst must not survive into the next tick
+    for (const c of list) {
+      if (c.alive) this.clampVelocities(c);
+    }
     this.eventQueue.drainCollisionEvents((h1: number, h2: number, started: boolean) => {
       if (!started) return;
       const o1 = this.owners.get(h1);
@@ -336,6 +342,32 @@ export class World {
     const seasonLight = 1 + SEASON_LIGHT_AMPLITUDE * seasonSin;
     this.light = Math.max(0, sunElev) * Math.max(0.1, seasonLight + this.climateDrift);
     this.coldStress = Math.max(0, -seasonSin * COLD_SEASON_STRESS - this.climateDrift);
+  }
+
+  /**
+   * Anti-explosion safety: newborns settle gently while the solver separates
+   * any sibling parts that developed overlapping; everyone else gets a
+   * terminal-velocity cap so penetration recovery can never launch a body
+   * through the heightfield.
+   */
+  private clampVelocities(c: Creature): void {
+    const newborn = c.age < 0.6;
+    const vMax = newborn ? 3 : 30;
+    const wMax = newborn ? 6 : 40;
+    for (const b of c.phys.bodies) {
+      const v = b.linvel();
+      const s = Math.hypot(v.x, v.y, v.z);
+      if (s > vMax) {
+        const k = vMax / s;
+        b.setLinvel({ x: v.x * k, y: v.y * k, z: v.z * k }, true);
+      }
+      const w = b.angvel();
+      const ws = Math.hypot(w.x, w.y, w.z);
+      if (ws > wMax) {
+        const k = wMax / ws;
+        b.setAngvel({ x: w.x * k, y: w.y * k, z: w.z * k }, true);
+      }
+    }
   }
 
   private applyWater(c: Creature): void {
@@ -457,7 +489,7 @@ export class World {
     const childCap = STORE_PER_MASS * born.plan.totalMass;
     const endowment = c.genome.organism.offspringEnergyFrac * c.energy;
     const overhead = GESTATION_OVERHEAD * endowment;
-    const need = overhead + childBiomass + 0.12 * childCap;
+    const need = overhead + childBiomass + 0.06 * childCap;
     if (endowment < need) {
       c.reproCooldown = 4;
       return false;
@@ -801,7 +833,7 @@ export class World {
       buf[k++] = p.x;
       buf[k++] = p.y;
       buf[k++] = p.z;
-      buf[k++] = Math.min(1, p.biomass / 16);
+      buf[k++] = Math.min(1, p.biomass / PLANT_MAX_BIOMASS);
       buf[k++] = p.phase;
       buf[k++] = (p.id % 17) / 17;
     }

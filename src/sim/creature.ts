@@ -23,7 +23,7 @@ import {
   TISSUE_ENERGY_DENSITY,
 } from '../shared/constants';
 import { Network } from './genome/brain';
-import { driveJoint, linVel, type CreaturePhysics } from './physics';
+import { driveJoint, type CreaturePhysics } from './physics';
 import type { Ledger } from './ecology/ledger';
 
 export class Creature {

@@ -242,11 +242,12 @@ describe('Ecosystem', () => {
   it('seeds, disperses within range, and germinates on fertile moist land', () => {
     const led = new Ledger();
     const eco = new Ecosystem(flatTerrain(0.9), new RNG(21), led);
-    led.soilToPlants(45);
+    led.soilToPlants(120);
     const parents = [
-      pushPlant(eco, 2000, -60, -60, 15, 0.1),
-      pushPlant(eco, 2001, 0, 60, 15, 0.5),
-      pushPlant(eco, 2002, 70, -20, 15, 0.8),
+      // at/above the seeding threshold (PLANT_SEED_THRESHOLD * PLANT_MAX_BIOMASS)
+      pushPlant(eco, 2000, -60, -60, 40, 0.1),
+      pushPlant(eco, 2001, 0, 60, 40, 0.5),
+      pushPlant(eco, 2002, 70, -20, 40, 0.8),
     ];
     let maxSeeds = 0;
     let seedsResolved = false;
