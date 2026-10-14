@@ -43,8 +43,14 @@ export class Timeline {
 
   private row(e: SimEvent, icon: string, text: string): HTMLLIElement {
     const li = document.createElement('li');
-    li.tabIndex = 0;
-    li.setAttribute('role', 'button');
+    const focusable = e.pos !== undefined;
+    if (focusable) {
+      li.tabIndex = 0;
+      li.setAttribute('role', 'button');
+      li.title = 'Fly the camera here';
+    } else {
+      li.classList.add('ev-static');
+    }
 
     const day = Math.floor((e.tick * DT) / DAY_LENGTH) + 1;
     const iconEl = document.createElement('span');
@@ -60,14 +66,16 @@ export class Timeline {
     li.append(iconEl, textEl, dayEl);
     li.setAttribute('aria-label', `${text}, day ${day}`);
 
-    const focus = (): void => this.onFocus(e);
-    li.addEventListener('click', focus);
-    li.addEventListener('keydown', (ev) => {
-      if (ev.key === 'Enter' || ev.code === 'Space') {
-        ev.preventDefault();
-        focus();
-      }
-    });
+    if (focusable) {
+      const focus = (): void => this.onFocus(e);
+      li.addEventListener('click', focus);
+      li.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' || ev.code === 'Space') {
+          ev.preventDefault();
+          focus();
+        }
+      });
+    }
     return li;
   }
 }

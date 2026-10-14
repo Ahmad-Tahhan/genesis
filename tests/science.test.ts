@@ -107,6 +107,16 @@ describe('energy conservation', () => {
     let sumPlant = 0;
     for (const p of w.eco.plants) if (p.alive) sumPlant += p.biomass;
     expect(Math.abs(l1.plants - sumPlant) / scale).toBeLessThan(1e-6);
+    // the soil GRID must mirror the ledger soil pool (founder/rescue spawns
+    // draw from both in lockstep — review finding: phantom soil)
+    expect(Math.abs(l1.soil - w.eco.soilTotal()) / scale).toBeLessThan(1e-6);
+  });
+
+  it('the initial soil pool affords the whole founder population', async () => {
+    const w = new World();
+    await w.init(1234);
+    const { INITIAL_POPULATION } = await import('../src/shared/constants');
+    expect(w.creatures.size).toBe(INITIAL_POPULATION);
   });
 
   it('ledger movers clamp without leaking energy', () => {

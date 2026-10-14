@@ -49,8 +49,11 @@ function fitCanvas(c: HTMLCanvasElement, w: number, h: number): CanvasRenderingC
 }
 
 /** Fully transparent stop matching a species hue (for extinct-line fades). */
-function transparentHue(hue: number): string {
-  return `hsla(${Math.round(hue * 360)}, 70%, 60%, 0)`;
+/** speciesColor() with 0 alpha — same hue formula, single color source. */
+function fadedSpeciesColor(hue: number): string {
+  const c = speciesColor(hue);
+  // speciesColor returns hsl(...); give it a 0-alpha twin for gradient ends
+  return c.replace('hsl(', 'hsla(').replace(')', ', 0)');
 }
 
 /**
@@ -210,7 +213,7 @@ export class PhyloView {
         const fadeFrom = Math.max(0, 1 - Math.min(0.5, 40 / Math.max(1, x2 - x1)));
         grad.addColorStop(0, col);
         grad.addColorStop(fadeFrom, col);
-        grad.addColorStop(1, transparentHue(n.hue));
+        grad.addColorStop(1, fadedSpeciesColor(n.hue));
         ctx.strokeStyle = grad;
       } else {
         ctx.strokeStyle = speciesColor(n.hue);

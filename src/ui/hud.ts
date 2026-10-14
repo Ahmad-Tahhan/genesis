@@ -144,7 +144,12 @@ export class Hud {
     b.textContent = label;
     b.title = title;
     b.setAttribute('aria-label', title);
-    b.addEventListener('click', onClick);
+    b.addEventListener('click', () => {
+      onClick();
+      // drop focus so the global Space/1/2/3 shortcuts keep working and
+      // Space doesn't re-trigger the focused button
+      b.blur();
+    });
     return b;
   }
 

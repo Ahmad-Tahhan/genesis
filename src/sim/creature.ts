@@ -43,6 +43,9 @@ export class Creature {
   health = CREATURE_MAX_HEALTH;
   age = 0;
   reproCooldown = 0;
+  /** Reproduction mode committed per cycle (not re-rolled per tick; D12). */
+  reproSexualMode: boolean | null = null;
+  reproModeTime = 0;
   childCount = 0;
   dietPlant = 0;
   dietMeat = 0;

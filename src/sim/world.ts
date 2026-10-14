@@ -167,12 +167,16 @@ export class World {
     const biomass = TISSUE_ENERGY_DENSITY * born.plan.totalMass;
     const store = 0.62 * STORE_PER_MASS * born.plan.totalMass;
     // founders and rescues condense out of the substrate: drawn from the soil
-    // pool so the books stay closed (DECISIONS.md D23)
+    // pool AND the soil grid in lockstep so the books stay closed and the
+    // nutrient gating sees real soil (DECISIONS.md D23, review finding)
     const need = biomass + store;
-    if (this.ledger.state().soil < need) return null;
-    this.ledger.soilToCreatures(need);
+    if (this.eco.drawSoilForSpawn(need) < need) return null;
     const spot = this.randomLandSpot();
-    return this.materialize(born, { x: spot.x, y: spot.y + 1.0, z: spot.z }, store, [], -1);
+    // a rescue mutated from a living template is that template's offspring —
+    // record the lineage so the phylogeny doesn't grow fake root species
+    const parents = nearGenomeOf ? [nearGenomeOf.id] : [];
+    const parentSpecies = nearGenomeOf ? nearGenomeOf.speciesId : -1;
+    return this.materialize(born, { x: spot.x, y: spot.y + 1.0, z: spot.z }, store, parents, parentSpecies);
   }
 
   private materialize(born: Born, pos: Vec3, store: number, parents: number[], parentSpecies: number): Creature {
@@ -277,11 +281,12 @@ export class World {
       const muscleCost = c.actuate();
       this.applyWater(c);
       this.clampVelocities(c);
+      if (!c.alive) continue; // drowned this tick: a dead creature cannot bite
       this.feed(c, list);
       c.age += DT;
       c.reproCooldown -= DT;
       if (c.age > MAX_AGE && this.rngMisc.chance(((c.age - MAX_AGE) / MAX_AGE) * DT)) c.die('oldAge');
-      c.metabolize(this.coldStress, muscleCost, this.ledger);
+      if (c.alive) c.metabolize(this.coldStress, muscleCost, this.ledger);
     }
 
     this.phys.step(this.eventQueue);
@@ -435,7 +440,13 @@ export class World {
         const net = this.ledger.biteCreature(gross, c.meatEff);
         victim.energy -= gross;
         c.absorb(net, 'meat');
-        const killed = victim.damage(BITE_DAMAGE * DT, 'killed');
+        let killed = victim.damage(BITE_DAMAGE * DT, 'killed');
+        // a bite that drains the last of the victim's store is a kill, not a
+        // starvation — attribute it to the predator
+        if (!killed && victim.alive && victim.energy <= 1e-9) {
+          victim.die('killed');
+          killed = true;
+        }
         if (killed) this.killerOf.set(victim.id, c);
         if (!this.firstPredationSeen) {
           this.firstPredationSeen = true;
@@ -471,10 +482,17 @@ export class World {
     if (!c.alive || c.age < MATURITY_AGE || c.reproCooldown > 0) return false;
     if (c.energy < REPRO_ENERGY_FRAC * c.capacity) return false;
 
+    // commit to a reproduction mode per cycle; a per-tick re-roll would let
+    // the asexual path win every race and erase the sexual gene's phenotype
+    if (c.reproSexualMode === null || this.time - c.reproModeTime > 8) {
+      c.reproSexualMode = this.rngEvo.chance(c.genome.organism.sexual);
+      c.reproModeTime = this.time;
+    }
+
     let born: Born;
     let parents: number[];
     let mate: Creature | null = null;
-    if (this.rngEvo.chance(c.genome.organism.sexual)) {
+    if (c.reproSexualMode) {
       mate = this.findMate(c);
       if (!mate) return false; // wants sex, no compatible mate nearby — wait
       const fitterFirst = c.energy / c.capacity >= mate.energy / mate.capacity;
@@ -517,7 +535,11 @@ export class World {
     this.materialize(born, pos, childStore, parents, c.speciesId);
     c.childCount++;
     c.reproCooldown = REPRO_COOLDOWN;
-    if (mate) mate.reproCooldown = REPRO_COOLDOWN * 0.5;
+    c.reproSexualMode = null;
+    if (mate) {
+      mate.reproCooldown = Math.max(mate.reproCooldown, REPRO_COOLDOWN * 0.5);
+      mate.childCount++;
+    }
     this.pushEvent({
       tick: this.tick,
       kind: 'birth',
@@ -547,7 +569,7 @@ export class World {
     let bestD = MATE_RANGE;
     for (const o of this.creatures.values()) {
       if (o === c || !o.alive || o.age < MATURITY_AGE) continue;
-      if (o.energy < 0.5 * o.capacity) continue;
+      if (o.energy < 0.5 * o.capacity || o.reproCooldown > 0) continue;
       const d = dist3(p, o.rootPos());
       if (d < bestD && genomeDistance(c.genome, o.genome) < SPECIES_THRESHOLD * 1.2) {
         best = o;

@@ -5,12 +5,12 @@
  * snapshots (DECISIONS.md D9).
  */
 import type { MainToWorker, Speed, WorkerToMain } from '../shared/protocol';
-import { INSPECT_INTERVAL_TICKS, PLANTS_SNAPSHOT_INTERVAL } from '../shared/constants';
 import { World } from './world';
 
 const ctx = self as unknown as Worker;
 
 let world: World | null = null;
+let worldReady = false;
 let speed: Speed = 1;
 let running = false;
 let lastFrame = 0;
@@ -19,6 +19,9 @@ let tpsCounter = 0;
 let tpsWindowStart = 0;
 let tps = 0;
 let lastMaxStats = 0;
+let lastSnapshotAt = 0;
+let lastPlantsAt = 0;
+let lastInspectAt = 0;
 
 function post(msg: WorkerToMain, transfer?: Transferable[]): void {
   if (transfer) ctx.postMessage(msg, transfer);
@@ -29,29 +32,34 @@ ctx.onmessage = (ev: MessageEvent<MainToWorker>) => {
   const msg = ev.data;
   switch (msg.type) {
     case 'init':
-      void boot(msg.seed);
+      boot(msg.seed).catch((e: unknown) => {
+        // rethrow outside the promise chain so the worker 'error' event fires
+        setTimeout(() => {
+          throw e;
+        });
+      });
       break;
     case 'setSpeed':
       speed = msg.speed;
       tickDebt = 0;
       break;
     case 'select':
-      if (world) world.selectedId = msg.creatureId;
-      if (world && msg.creatureId !== null) {
+      if (world && worldReady) world.selectedId = msg.creatureId;
+      if (world && worldReady && msg.creatureId !== null) {
         post({ type: 'inspect', detail: world.detail(msg.creatureId) });
       }
       break;
     case 'pick': {
-      if (!world) break;
+      if (!world || !worldReady) break;
       const id = world.pick(msg.origin, msg.dir);
       post({ type: 'picked', id });
       break;
     }
     case 'queryPhylo':
-      if (world) post({ type: 'phylo', nodes: world.phylo() });
+      if (world && worldReady) post({ type: 'phylo', nodes: world.phylo() });
       break;
     case 'queryHistory':
-      if (world) post({ type: 'history', series: world.history() });
+      if (world && worldReady) post({ type: 'history', series: world.history() });
       break;
     case 'returnBuffer':
       // buffer pooling is a no-op for now: snapshots allocate fresh arrays
@@ -75,6 +83,7 @@ async function boot(seed: number): Promise<void> {
       fertility: t.fertility,
     },
   });
+  worldReady = true;
   flushOutboxes(true);
   running = true;
   lastFrame = performance.now();
@@ -88,6 +97,7 @@ function loop(): void {
 
   if (speed === 0) {
     lastFrame = now;
+    flushOutboxes(false); // nothing may sit stranded for the whole pause
     setTimeout(loop, 50);
     return;
   }
@@ -127,13 +137,19 @@ function loop(): void {
   updateTps();
 
   if (ran > 0) {
-    const snap = world.encodeSnapshot().buffer as ArrayBuffer;
-    post({ type: 'snapshot', buffer: snap }, [snap]);
-    if (world.tick % PLANTS_SNAPSHOT_INTERVAL < speed) {
+    const wall = performance.now();
+    if (wall - lastSnapshotAt >= 15) {
+      lastSnapshotAt = wall;
+      const snap = world.encodeSnapshot().buffer as ArrayBuffer;
+      post({ type: 'snapshot', buffer: snap }, [snap]);
+    }
+    if (wall - lastPlantsAt >= 200) {
+      lastPlantsAt = wall;
       const plants = world.encodePlants().buffer as ArrayBuffer;
       post({ type: 'plants', buffer: plants }, [plants]);
     }
-    if (world.selectedId !== null && world.tick % INSPECT_INTERVAL_TICKS < speed) {
+    if (world.selectedId !== null && wall - lastInspectAt >= 100) {
+      lastInspectAt = wall;
       post({ type: 'inspect', detail: world.detail(world.selectedId) });
     }
     flushOutboxes(false);
@@ -173,8 +189,10 @@ function flushOutboxes(force: boolean): void {
 function trimOutboxes(): void {
   if (!world) return;
   if (world.outEvents.length > 400) {
-    world.outEvents.sort((a, b) => b.interest - a.interest);
-    world.outEvents.length = 200;
+    // keep the interesting ones IN ORDER (the timeline assumes chronology)
+    const kept = world.outEvents.filter((e) => e.interest >= 0.5);
+    world.outEvents.length = 0;
+    world.outEvents.push(...kept.slice(-200));
   }
 }
 

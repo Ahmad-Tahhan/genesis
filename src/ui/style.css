@@ -408,3 +408,11 @@ body {
     gap: var(--sp-2);
   }
 }
+
+/* events without a world position are informational, not clickable */
+.events li.ev-static {
+  cursor: default;
+}
+.events li.ev-static:hover {
+  background: transparent;
+}

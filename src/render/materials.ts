@@ -74,7 +74,18 @@ function hslToRgbBytes(h: number, s: number, l: number): [number, number, number
   ];
 }
 
-/** Evict least-recently-used entries (front of the Map) down to `cap - 1`. */
+/** Dispose a cached material and the textures it owns. */
+function disposeMat(mat: THREE.MeshStandardMaterial): void {
+  mat.map?.dispose();
+  mat.roughnessMap?.dispose();
+  mat.dispose();
+}
+
+/**
+ * Evict least-recently-used entries (front of the Map) down to `cap - 1`.
+ * A material still referenced by live meshes (refs > 0) is only marked
+ * evicted; releaseMaterial() disposes it when the last mesh lets go.
+ */
 function evictIfFull(cache: Map<string, THREE.MeshStandardMaterial>, cap: number): void {
   while (cache.size >= cap) {
     const oldest = cache.keys().next();
@@ -82,11 +93,28 @@ function evictIfFull(cache: Map<string, THREE.MeshStandardMaterial>, cap: number
     const mat = cache.get(oldest.value);
     cache.delete(oldest.value);
     if (mat) {
-      mat.map?.dispose();
-      mat.roughnessMap?.dispose();
-      mat.dispose();
+      if ((mat.userData.refs ?? 0) > 0) mat.userData.evicted = true;
+      else disposeMat(mat);
     }
   }
+}
+
+/** Count a mesh's hold on a shared cached material (see releaseMaterial). */
+function acquire(mat: THREE.MeshStandardMaterial): THREE.MeshStandardMaterial {
+  mat.userData.refs = (mat.userData.refs ?? 0) + 1;
+  return mat;
+}
+
+/**
+ * Release a material obtained from skinMaterial()/mouthMaterial(). Must be
+ * called exactly once per acquisition when the owning mesh is disposed; an
+ * evicted material is destroyed when its last reference is released.
+ */
+export function releaseMaterial(mat: THREE.Material): void {
+  const m = mat as THREE.MeshStandardMaterial;
+  if (typeof m.userData?.refs !== 'number') return; // not one of ours
+  m.userData.refs = Math.max(0, m.userData.refs - 1);
+  if (m.userData.refs === 0 && m.userData.evicted) disposeMat(m);
 }
 
 /**
@@ -227,12 +255,12 @@ export function skinMaterial(plan: BodyPlan, partIndex: number): THREE.MeshStand
     // LRU refresh: move to the back of the Map's insertion order.
     skinCache.delete(key);
     skinCache.set(key, hit);
-    return hit;
+    return acquire(hit);
   }
   evictIfFull(skinCache, SKIN_CACHE_CAP);
   const mat = buildSkin(h, s, l, freq, amp, fnv1a(key));
   skinCache.set(key, mat);
-  return mat;
+  return acquire(mat);
 }
 
 /**
@@ -249,7 +277,7 @@ export function mouthMaterial(color: [number, number, number]): THREE.MeshStanda
   if (hit) {
     mouthCache.delete(key);
     mouthCache.set(key, hit);
-    return hit;
+    return acquire(hit);
   }
   evictIfFull(mouthCache, MOUTH_CACHE_CAP);
   const mat = new THREE.MeshStandardMaterial({
@@ -264,5 +292,5 @@ export function mouthMaterial(color: [number, number, number]): THREE.MeshStanda
   });
   mat.name = 'mouth';
   mouthCache.set(key, mat);
-  return mat;
+  return acquire(mat);
 }

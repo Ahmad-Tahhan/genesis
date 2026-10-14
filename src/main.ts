@@ -7,7 +7,7 @@ import './ui/inspector.css';
 import * as THREE from 'three';
 import type { MainToWorker, Speed, WorkerToMain } from './shared/protocol';
 import type { CreatureInfo, SimEvent, WorldStats } from './shared/types';
-import { DAY_LENGTH } from './shared/constants';
+import { DAY_LENGTH, YEAR_LENGTH } from './shared/constants';
 import { Renderer } from './render/renderer';
 import { CreatureMeshes } from './render/creatures';
 import { PlantMeshes } from './render/plants';
@@ -54,11 +54,18 @@ const speciesNames = new Map<number, string>();
 let lastStats: WorldStats | null = null;
 let selected: number | null = null;
 let speed: Speed = 1;
+// Sim clock kept main-side in float64 (snapshot floats are f32 and would go
+// steppy on long runs): advanced locally, resynced from stats messages.
 let simTime = 0;
-let sunAngle = Math.PI * 0.35;
-let seasonPhase = 0;
+let simRate = 1; // sim-seconds per wall-second (estimated in max mode)
+let lastStatsSync: { wall: number; time: number } | null = null;
 let waterLevel = 0;
 let ready = false;
+let activeTab: TabName = 'inspector';
+const deferredDeaths: number[] = [];
+
+const sunAngleOf = (t: number): number => ((t % DAY_LENGTH) / DAY_LENGTH) * Math.PI * 2;
+const seasonPhaseOf = (t: number): number => (t % YEAR_LENGTH) / YEAR_LENGTH;
 
 const speciesName = (id?: number): string =>
   id === undefined ? '?' : (speciesNames.get(id) ?? `species ${id}`);
@@ -85,13 +92,25 @@ const timeline = new Timeline(panel.content('events'), (e) => {
 const captions = new Captions(captionRoot);
 
 function setSpeed(s: Speed): void {
+  const wasMax = speed === -1;
   speed = s;
   send({ type: 'setSpeed', speed: s });
   hud.setSpeed(s);
+  simRate = s === 0 ? 0 : s === 1 ? 1 : s === 10 ? 10 : simRate;
+  if (s === -1) {
+    captions.show('⏩ Simulating at maximum speed — rendering paused');
+  } else if (wasMax) {
+    // deaths deferred during max (no snapshots arrive) are applied now
+    for (const id of deferredDeaths) creatures.remove(id);
+    deferredDeaths.length = 0;
+  }
 }
 
 function select(id: number | null): void {
-  if (id !== null && !infoById.has(id)) return; // dead or unknown: no-op
+  if (id !== null && !infoById.has(id)) {
+    captions.show('That creature is no longer alive', 2);
+    return;
+  }
   selected = id;
   creatures.setSelected(id);
   send({ type: 'select', creatureId: id });
@@ -100,6 +119,9 @@ function select(id: number | null): void {
 }
 
 // ------------------------------------------------------------- messages
+worker.onerror = () => {
+  captions.show('⚠️ The simulation worker crashed — reload the page to restart', 30);
+};
 worker.onmessage = (ev: MessageEvent<WorkerToMain>) => {
   const msg = ev.data;
   switch (msg.type) {
@@ -114,30 +136,34 @@ worker.onmessage = (ev: MessageEvent<WorkerToMain>) => {
       break;
     case 'death':
       infoById.delete(msg.id);
-      creatures.remove(msg.id);
+      // in max mode no snapshots arrive, so removing meshes immediately would
+      // visibly drain the world while the sim reports a full population
+      if (speed === -1) deferredDeaths.push(msg.id);
+      else creatures.remove(msg.id);
       if (selected === msg.id) select(null);
       break;
     case 'snapshot': {
       const arr = new Float32Array(msg.buffer);
-      simTime = arr[0];
-      sunAngle = arr[2];
-      seasonPhase = arr[3];
       creatures.applySnapshot(arr);
       break;
     }
     case 'plants':
       plants.applyPlants(new Float32Array(msg.buffer));
       break;
-    case 'stats':
+    case 'stats': {
       lastStats = msg.stats;
       for (const s of msg.stats.species) speciesNames.set(s.id, s.name);
       hud.update(msg.stats, renderer.fps(), seed);
-      if (speed === -1) {
-        // no snapshots in max mode: derive the clock from stats time
-        simTime = msg.stats.time;
-        sunAngle = ((msg.stats.time % DAY_LENGTH) / DAY_LENGTH) * Math.PI * 2;
+      // float64 clock resync (and rate estimate for max mode)
+      const wall = performance.now() / 1000;
+      if (lastStatsSync && speed === -1) {
+        const dw = wall - lastStatsSync.wall;
+        if (dw > 0.1) simRate = Math.max(0, (msg.stats.time - lastStatsSync.time) / dw);
       }
+      lastStatsSync = { wall, time: msg.stats.time };
+      simTime = msg.stats.time;
       break;
+    }
     case 'events':
       handleEvents(msg.events);
       break;
@@ -162,7 +188,7 @@ function handleEvents(events: SimEvent[]): void {
   timeline.add(events, speciesName);
   for (const e of events) {
     if (e.interest >= 0.55) {
-      renderer.docCam.offerEvent(e);
+      if (e.pos) renderer.docCam.offerEvent(e); // a camera cannot frame nowhere
       const cap = captionFor(e, speciesName);
       if (cap) captions.show(`${cap.icon} ${cap.text}`);
       sound.event(e.kind);
@@ -208,6 +234,7 @@ renderer.docCam.auto = true;
 // panel-driven queries
 let queryTimer = 0;
 panel.onSelect = (tab: TabName) => {
+  activeTab = tab;
   if (tab === 'phylo') send({ type: 'queryPhylo' });
   if (tab === 'species') send({ type: 'queryHistory' });
 };
@@ -220,7 +247,9 @@ function frame(): void {
   last = now;
 
   if (ready) {
-    renderer.setSun(sunAngle, seasonPhase);
+    simTime += dt * simRate;
+    const sunAngle = sunAngleOf(simTime);
+    renderer.setSun(sunAngle, seasonPhaseOf(simTime));
     creatures.update(dt);
     plants.update(dt, simTime);
     captions.update(dt);
@@ -237,8 +266,9 @@ function frame(): void {
     queryTimer += dt;
     if (queryTimer > 2.5) {
       queryTimer = 0;
-      send({ type: 'queryHistory' });
-      send({ type: 'queryPhylo' });
+      // only the visible panel's data is worth shipping and redrawing
+      if (activeTab === 'species') send({ type: 'queryHistory' });
+      if (activeTab === 'phylo') send({ type: 'queryPhylo' });
     }
   }
   requestAnimationFrame(frame);

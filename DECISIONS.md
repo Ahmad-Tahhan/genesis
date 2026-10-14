@@ -190,3 +190,22 @@ offspring tissue is cheaper (1.2 E/kg). Result over 1000 sim-seconds:
 sustained natural reproduction, population turnover (100 births/78 deaths),
 and the first emergent selection trend — mean gut herbivory fell 0.65 → 0.43
 (carnivory pays when live creatures are the densest energy source).
+
+## D30 — Adversarial review round (25 confirmed findings, all addressed or dispositioned)
+A five-dimension review fleet (science/ledger, sim correctness, render perf,
+UI checklist, protocol wiring) with per-finding adversarial verification
+confirmed 25 findings; 0 were refuted. Fixed: phantom-soil spawn draws (the
+grid now debits in lockstep with the ledger, with a grid-vs-ledger invariant
+test), founder affordability (soil pool raised; test pins exact founder
+count), touch sense (collision events were never enabled on colliders),
+texture-cache eviction vs live meshes (refcounted release), 10x message
+flooding (wall-clock rate gates), hidden-tab dead-mesh accumulation
+(visibility-aware reaping), dead creatures biting in their death tick,
+per-tick reproduction-mode re-rolls erasing the sexual gene, mate cooldown
+abuse, rescue lineage holes in the phylogeny, kill attribution on store
+drain, float32 clock stepping (main-side float64 clock), max-mode scene
+drain + season drift, chronological event trimming, pause outbox stranding,
+pre-init query crashes, silent worker death, HUD focus eating shortcuts,
+phylo's second color formula, inert timeline rows. Consciously not changed:
+HUD day/year counters bypass fmt() (small integers render identically; the
+chart axis style is a different unit domain).

@@ -11,7 +11,7 @@
 import * as THREE from 'three';
 import type { CreatureInfo, PlanPart } from '../shared/types';
 import { PART_FLOATS, SNAP_HEADER } from '../shared/protocol';
-import { mouthMaterial, skinMaterial } from './materials';
+import { mouthMaterial, releaseMaterial, skinMaterial } from './materials';
 
 /** Seconds a removed creature takes to sink and fade out. */
 const FADE_SECONDS = 1.5;
@@ -79,6 +79,10 @@ interface CreatureRec {
   dying: number;
   /** First snapshot received — until then the group is hidden. */
   hasPose: boolean;
+  /** Shared cached materials acquired for this creature (released at finalize). */
+  acquired: THREE.Material[];
+  /** Wall-clock ms of remove(): backstop reaping when rAF is suspended. */
+  diedWall: number;
 }
 
 /** mesh.scale for a part: capsule (r, (h+r)/2, r) matches the physics capsule's
@@ -201,12 +205,12 @@ export class CreatureMeshes {
     group.userData.creatureId = info.id;
 
     const parts: THREE.Mesh[] = [];
+    const acquired: THREE.Material[] = [];
     for (let i = 0; i < info.plan.parts.length; i++) {
       const part = info.plan.parts[i];
-      const mesh = new THREE.Mesh(
-        part.shape === 'capsule' ? unitCapsule : unitBox,
-        skinMaterial(info.plan, i),
-      );
+      const skin = skinMaterial(info.plan, i);
+      acquired.push(skin);
+      const mesh = new THREE.Mesh(part.shape === 'capsule' ? unitCapsule : unitBox, skin);
       partScale(part, mesh.scale);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
@@ -237,7 +241,9 @@ export class CreatureMeshes {
         _dir.normalize();
         surfacePoint(part, _dir, _surf);
         const mouthR = Math.min(Math.max(minDim * 0.42, 0.025), 0.1);
-        addDot(mesh, _surf, mouthR, mouthMaterial(part.color), info.id);
+        const mm = mouthMaterial(part.color);
+        acquired.push(mm);
+        addDot(mesh, _surf, mouthR, mm, info.id);
       }
 
       group.add(mesh);
@@ -252,6 +258,8 @@ export class CreatureMeshes {
       fadeMats: null,
       dying: -1,
       hasPose: false,
+      acquired,
+      diedWall: 0,
     });
   }
 
@@ -260,6 +268,13 @@ export class CreatureMeshes {
     const rec = this.recs.get(id);
     if (!rec || rec.dying >= 0) return;
     rec.dying = 0;
+    rec.diedWall = performance.now();
+    // rAF (and so update()) is suspended in hidden tabs while worker messages
+    // keep arriving: without a backstop, fades would accumulate unboundedly.
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      this.finalize(rec);
+      return;
+    }
     const mats: THREE.Material[] = [];
     rec.group.traverse((o) => {
       const mesh = o as THREE.Mesh;
@@ -283,6 +298,11 @@ export class CreatureMeshes {
   applySnapshot(data: Float32Array): void {
     this.snapData = data;
     decodeCreatureSnapshot(data, this.poseVisitor);
+    // reap fades stranded by a suspended rAF (hidden tab)
+    const now = performance.now();
+    for (const rec of this.recs.values()) {
+      if (rec.dying >= 0 && now - rec.diedWall > 4000) this.finalize(rec);
+    }
   }
 
   /** Bound once — no per-frame closure allocation in the snapshot hot path. */
@@ -392,7 +412,9 @@ export class CreatureMeshes {
   private finalize(rec: CreatureRec): void {
     this.root.remove(rec.group);
     if (rec.fadeMats) for (const m of rec.fadeMats) m.dispose();
-    // Geometries and skin/eye/mouth materials are shared — never disposed here.
+    // Shared cached materials: release our hold so evicted ones can dispose.
+    for (const m of rec.acquired) releaseMaterial(m);
+    rec.acquired.length = 0;
     this.recs.delete(rec.id);
   }
 }

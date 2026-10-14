@@ -211,6 +211,34 @@ export class Ecosystem {
     return this.cells[this.cellIndex(x, z)];
   }
 
+  /** Sum of the soil grid (must mirror the ledger's soil pool exactly). */
+  soilTotal(): number {
+    let t = 0;
+    for (let i = 0; i < this.cells.length; i++) t += this.cells[i];
+    return t;
+  }
+
+  /**
+   * Withdraws up to `want` E of soil for a creature spawn (founders/rescues,
+   * DECISIONS.md D23), debiting the grid proportionally across cells and the
+   * ledger soil->creatures pool by the identical amount. Returns the E moved.
+   */
+  drawSoilForSpawn(want: number): number {
+    if (want <= 0) return 0;
+    const total = this.soilTotal();
+    if (total < want) return 0; // all-or-nothing: no partial spawns
+    const moved = this.ledger.soilToCreatures(want);
+    if (moved < want - 1e-9) {
+      // ledger clamped below what the grid holds (mirror drift): refund and
+      // report failure rather than desync the mirror further
+      this.ledger.creaturesToSoil(moved);
+      return 0;
+    }
+    const frac = moved / total;
+    for (let i = 0; i < this.cells.length; i++) this.cells[i] -= this.cells[i] * frac;
+    return moved;
+  }
+
   /**
    * Draws up to `want` E from a soil cell into the plants pool (zero-sum:
    * the grid cell and ledger soil drop by the identical moved amount).

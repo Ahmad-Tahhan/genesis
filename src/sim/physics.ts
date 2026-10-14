@@ -273,7 +273,12 @@ export function buildCreature(
         : RAPIER.ColliderDesc.cuboid(sx, sy, sz);
     // plan.mass already encodes the gene density; collider density in kg/m^3
     const density = part.volume > 1e-9 ? part.mass / part.volume : TISSUE_DENSITY;
-    colDesc.setDensity(density).setFriction(PART_FRICTION).setCollisionGroups(CREATURE_GROUPS);
+    colDesc
+      .setDensity(density)
+      .setFriction(PART_FRICTION)
+      .setCollisionGroups(CREATURE_GROUPS)
+      // contact start events feed the touch sense (world.ts drains them)
+      .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
     colliders[i] = world.createCollider(colDesc, body);
 
     if (part.parentIndex >= 0) {
