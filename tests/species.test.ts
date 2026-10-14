@@ -208,10 +208,8 @@ describe('makeSpeciesName', () => {
   });
 
   it('is deterministic for a given seed', () => {
-    const a = Array.from({ length: 20 }, () => makeSpeciesName(new RNG(9)).length && '').length;
-    expect(a).toBe(20); // draws above only sized the array; real check below
-    const seqA = [];
-    const seqB = [];
+    const seqA: string[] = [];
+    const seqB: string[] = [];
     const rngA = new RNG(77);
     const rngB = new RNG(77);
     for (let i = 0; i < 20; i++) {
