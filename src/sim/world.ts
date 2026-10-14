@@ -164,7 +164,7 @@ export class World {
       : randomGenome(this.rngEvo, this.tracker, this.nextGeneId);
     if (!born.plan.viable) return null;
     const biomass = TISSUE_ENERGY_DENSITY * born.plan.totalMass;
-    const store = 0.55 * STORE_PER_MASS * born.plan.totalMass;
+    const store = 0.62 * STORE_PER_MASS * born.plan.totalMass;
     // founders and rescues condense out of the substrate: drawn from the soil
     // pool so the books stay closed (DECISIONS.md D23)
     const need = biomass + store;
@@ -364,6 +364,8 @@ export class World {
   /** One bite per tick from the first mouth part with a reachable target. */
   private feed(c: Creature, list: Creature[]): void {
     if (c.energy >= c.capacity - 1e-6) return;
+    // intake scales allometrically, like metabolism (Kleiber-style)
+    const biteBudget = EAT_RATE * Math.pow(c.plan.totalMass, 0.75) * DT;
     for (let i = 0; i < c.plan.parts.length; i++) {
       const part = c.plan.parts[i];
       if (!part.mouth) continue;
@@ -391,7 +393,7 @@ export class World {
         }
       }
       if (victim) {
-        const gross = Math.min(EAT_RATE * DT, Math.max(0, victim.corpseEnergy()));
+        const gross = Math.min(biteBudget, Math.max(0, victim.corpseEnergy()));
         const net = this.ledger.biteCreature(gross, c.meatEff);
         victim.energy = Math.max(0, victim.energy - gross);
         c.absorb(net, 'meat');
@@ -412,14 +414,14 @@ export class World {
       }
 
       // 2. scavenge a corpse
-      const scav = this.eco.scavengeAt(mouth.x, mouth.z, EAT_RATE * DT, c.meatEff);
+      const scav = this.eco.scavengeAt(mouth.x, mouth.z, biteBudget, c.meatEff);
       if (scav > 0) {
         c.absorb(scav, 'meat');
         return;
       }
 
       // 3. graze plants
-      const net = this.eco.grazeAt(mouth.x, mouth.z, EAT_RATE * DT, c.plantEff);
+      const net = this.eco.grazeAt(mouth.x, mouth.z, biteBudget, c.plantEff);
       if (net > 0) {
         c.absorb(net, 'plant');
         return;

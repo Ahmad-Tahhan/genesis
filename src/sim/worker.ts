@@ -127,11 +127,11 @@ function loop(): void {
   updateTps();
 
   if (ran > 0) {
-    const snap = world.encodeSnapshot();
-    post({ type: 'snapshot', buffer: snap.buffer }, [snap.buffer]);
+    const snap = world.encodeSnapshot().buffer as ArrayBuffer;
+    post({ type: 'snapshot', buffer: snap }, [snap]);
     if (world.tick % PLANTS_SNAPSHOT_INTERVAL < speed) {
-      const plants = world.encodePlants();
-      post({ type: 'plants', buffer: plants.buffer }, [plants.buffer]);
+      const plants = world.encodePlants().buffer as ArrayBuffer;
+      post({ type: 'plants', buffer: plants }, [plants]);
     }
     if (world.selectedId !== null && world.tick % INSPECT_INTERVAL_TICKS < speed) {
       post({ type: 'inspect', detail: world.detail(world.selectedId) });

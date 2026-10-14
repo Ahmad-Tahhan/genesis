@@ -181,23 +181,38 @@ describe('selection pressure changes trait means', () => {
     expect(m1).toBeLessThan(m0 - 0.2); // selection moved the mean substantially
   });
 
-  it('a control without selection drifts far less than the selected line', () => {
+  it('the selected line ends well below a same-start unselected control line', () => {
+    // Mutation-clamp bias moves the mean a little on its own, so the honest
+    // control is comparative: same founders, same generations, selection off.
     const rng = new RNG(43);
     const tracker = new InnovationTracker();
     let geneId = 1;
     const nextGeneId = () => geneId++;
-    let pop = Array.from({ length: 48 }, () => randomGenome(rng, tracker, nextGeneId).genome);
+    const founders = Array.from({ length: 48 }, () => randomGenome(rng, tracker, nextGeneId).genome);
     const mean = (gs: Genome[]) => gs.reduce((s, g) => s + g.organism.gutHerbivory, 0) / gs.length;
-    const m0 = mean(pop);
-    for (let gen = 0; gen < 30; gen++) {
-      const parents = Array.from({ length: 16 }, () => pop[rng.int(pop.length)]);
-      pop = parents.flatMap((p) => [
-        mutateGenome(p, rng, tracker, nextGeneId).genome,
-        mutateGenome(p, rng, tracker, nextGeneId).genome,
-        mutateGenome(p, rng, tracker, nextGeneId).genome,
-      ]);
-    }
-    expect(Math.abs(mean(pop) - m0)).toBeLessThan(0.15);
+
+    const runLine = (select: boolean, seed: number): number => {
+      const r = new RNG(seed);
+      let pop = founders.slice();
+      for (let gen = 0; gen < 30; gen++) {
+        let parents: Genome[];
+        if (select) {
+          parents = [...pop].sort((a, b) => a.organism.gutHerbivory - b.organism.gutHerbivory).slice(0, 16);
+        } else {
+          parents = Array.from({ length: 16 }, () => pop[r.int(pop.length)]);
+        }
+        pop = parents.flatMap((p) => [
+          mutateGenome(p, r, tracker, nextGeneId).genome,
+          mutateGenome(p, r, tracker, nextGeneId).genome,
+          mutateGenome(p, r, tracker, nextGeneId).genome,
+        ]);
+      }
+      return mean(pop);
+    };
+
+    const selected = runLine(true, 1001);
+    const control = runLine(false, 1001);
+    expect(selected).toBeLessThan(control - 0.15);
   });
 
   it('brains evolve a stimulus-response under selection (NEAT works end to end)', () => {
@@ -262,11 +277,21 @@ describe('determinism', () => {
     const w = new World();
     await w.init(555);
     for (let i = 0; i < 600; i++) w.step();
-    const { sampleHeight } = await import('../src/sim/ecology/terrain');
+    // Rapier interpolates heightfield triangles, our sampleHeight is bilinear;
+    // near carved gorge walls they differ by meters. The interpolation-robust
+    // floor is the minimum corner height of the enclosing grid cell.
+    const t = w.terrain;
+    const cellMinHeight = (x: number, z: number): number => {
+      const fx = (x / t.size + 0.5) * t.res;
+      const fz = (z / t.size + 0.5) * t.res;
+      const ix = Math.max(0, Math.min(t.res - 1, Math.floor(fx)));
+      const iz = Math.max(0, Math.min(t.res - 1, Math.floor(fz)));
+      const i = (zz: number, xx: number) => t.heights[zz * (t.res + 1) + xx];
+      return Math.min(i(iz, ix), i(iz, ix + 1), i(iz + 1, ix), i(iz + 1, ix + 1));
+    };
     for (const c of w.creatures.values()) {
       const p = c.rootPos();
-      const h = sampleHeight(w.terrain, p.x, p.z);
-      expect(p.y).toBeGreaterThan(h - 2.5);
+      expect(p.y).toBeGreaterThan(cellMinHeight(p.x, p.z) - 1.0);
       expect(c.health).toBeLessThanOrEqual(CREATURE_MAX_HEALTH + 1e-9);
     }
   });

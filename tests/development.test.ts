@@ -328,14 +328,14 @@ describe('develop', () => {
 
   it('applies sizeScale and clamps each size component to [MIN, MAX]', () => {
     const body = [
-      gene({ id: 0, parent: -1, size: { x: 0.5, y: 0.3, z: 0.04 }, mouth: true }),
-      gene({ id: 1, parent: 0, size: { x: 0.2, y: 0.2, z: 0.2 } }),
+      gene({ id: 0, parent: -1, size: { x: 0.5, y: 0.2, z: 0.04 }, mouth: true }),
+      gene({ id: 1, parent: 0, size: { x: 0.15, y: 0.15, z: 0.15 } }),
     ];
     const plan = develop(body, org({ sizeScale: 1.8 }));
     expect(plan.parts[0].size.x).toBeCloseTo(MAX_PART_DIM, 9); // 0.9 clamped down
-    expect(plan.parts[0].size.y).toBeCloseTo(0.3 * 1.8, 9); // in range
+    expect(plan.parts[0].size.y).toBeCloseTo(0.2 * 1.8, 9); // in range (< MAX_PART_DIM)
     expect(plan.parts[0].size.z).toBeCloseTo(MIN_PART_DIM, 9); // 0.072 clamped up
-    expect(plan.parts[1].size.x).toBeCloseTo(0.36, 9);
+    expect(plan.parts[1].size.x).toBeCloseTo(0.27, 9);
     expectPlanInvariants(plan);
   });
 

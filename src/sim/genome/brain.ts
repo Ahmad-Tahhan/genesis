@@ -95,7 +95,7 @@ export function createBrain(numIn: number, numOut: number, rng: RNG, tracker: In
       const tmp = pool[j];
       pool[j] = pool[r];
       pool[r] = tmp;
-      conns.push({ innov: tracker.register(pool[j], to), from: pool[j], to, w: clampW(rng.gaussian(0, 1)), on: true });
+      conns.push({ innov: tracker.register(pool[j], to), from: pool[j], to, w: clampW(rng.gaussian(0, 0.6)), on: true });
     }
   }
   return { nodes, conns, nextNode: HIDDEN_BASE };
