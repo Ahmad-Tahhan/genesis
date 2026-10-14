@@ -143,3 +143,26 @@ examples-jsm import paths stable with the types package.
 The same gradient fields creatures smell are cheap to maintain and reused by
 the documentary system (carrion spikes ⇒ possible kill site) — one source of
 truth, no duplicated bookkeeping.
+
+## D23 — Founders and rescues condense from the soil pool
+Seeded founders (and population-rescue respawns) debit their full energy
+(store + biomass) from the soil nutrient pool. No energy enters the world
+except sunlight; no founder is free. If the soil cannot pay, the spawn fails.
+
+## D24 — No juvenile growth stage
+Offspring are born at full genomic size; the parent must afford the child's
+structural biomass + a minimum store out of its endowment gene. A growth model
+was cut for scope; the energetic cost of reproduction is still honest, which
+is what the selection pressure needs.
+
+## D25 — Energy scale rebalance at integration
+TISSUE_ENERGY_DENSITY lowered to 1.6 E/kg and SOIL_INITIAL_NUTRIENTS raised so
+that (a) a parent's store can afford a child's biomass and (b) the initial
+soil pool can pay for the founder population. Recorded here because the first
+draft constants made reproduction mathematically impossible.
+
+## D26 — UI checklist
+The finding-patterns phase ran on a greenfield repo: 0-member family, no
+reference, no pre-existing theme. The theme proposal (D10 tokens in
+src/ui/style.css) plus a 12-line convention checklist were established and
+embedded verbatim in the UI implementation briefs; verification happens in M5.

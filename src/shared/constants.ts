@@ -35,14 +35,19 @@ export const EYE_FOV_SPREAD = 0.45; // radians between fanned rays
 export const TISSUE_DENSITY = 420; // kg/m^3 baseline; gene multiplies 0.6..1.6
 
 // ---------- energy / metabolism ----------
-export const TISSUE_ENERGY_DENSITY = 9; // E per kg of body mass (build/corpse value)
+export const TISSUE_ENERGY_DENSITY = 1.6; // E per kg of body mass (build/corpse value)
 export const KLEIBER_COEFF = 0.011; // E/s per kg^0.75 basal
 export const NEURON_COST = 0.00022; // E/s per brain node
 export const SYNAPSE_COST = 0.00006; // E/s per enabled connection
-export const MUSCLE_WORK_COST = 0.055; // E per (N*m * rad) of commanded work
+export const MUSCLE_WORK_COST = 0.02; // E per (N*m * rad) of commanded work
 export const MUSCLE_ACTIVATION_COST = 0.004; // E/s per (activation * maxTorque/100)
 export const MUSCLE_TORQUE_PER_VOLUME = 2400; // N*m per m^3 of part volume at muscle=1
-export const STORE_PER_MASS = 7.5; // energy store capacity: E per kg
+export const STORE_PER_MASS = 9; // energy store capacity: E per kg
+export const MAX_AGE = 600; // seconds; old-age mortality ramps in near this
+export const DROWN_GRACE = 8; // seconds submerged before drowning damage
+export const DROWN_DPS = 7; // health/s while drowning
+export const BUOYANCY_ACCEL = 13.5; // m/s^2 upward at full submersion (vs |GRAVITY|)
+export const WATER_DRAG = 0.1; // extra per-tick velocity damping in water
 export const EAT_RATE = 10; // E/s transferable while biting
 export const BITE_RANGE = 0.55; // m from mouth part tip
 export const DIGEST_LOSS = 0.25; // fraction of ingested energy lost as heat at best
@@ -94,7 +99,7 @@ export const PLANT_SEED_INTERVAL = 22; // seconds between seeding attempts
 export const SEED_DISPERSAL = 14; // meters (scaled by wind)
 export const GERMINATION_MOISTURE = 0.18;
 export const SOIL_GRID_RES = 64;
-export const SOIL_INITIAL_NUTRIENTS = 11000; // total E spread over fertile cells
+export const SOIL_INITIAL_NUTRIENTS = 140000; // total E spread over fertile cells
 export const DECOMPOSE_RATE = 0.06; // fraction of corpse biomass per second
 export const DECOMPOSE_LOSS = 0.2; // fraction of decomposed energy lost as heat
 export const CARRION_SMELL_GAIN = 1.0;
